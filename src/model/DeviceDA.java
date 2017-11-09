@@ -23,7 +23,7 @@ import jdbc.DBUpdate;
 import jdbc.TransactionFrame;
 
 /**
- * Created by Y Sa on 12/15/16.
+ * Created by Y sa on 10/11/2017
  */
 public class DeviceDA {
 
