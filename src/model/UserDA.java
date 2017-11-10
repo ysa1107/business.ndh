@@ -1,295 +1,211 @@
 package model;
 
-import com.nct.framework.util.ConvertUtils;
-import ga.log4j.GA;
-import grabman.entity.SchoolEnt;
-import grabman.entity.UserEnt;
+import com.kyt.framework.config.LogUtil;
+import com.kyt.framework.dbconn.ClientManager;
+import com.kyt.framework.dbconn.ManagerIF;
+import com.kyt.framework.util.DateTimeUtils;
+import constant.DATABASE;
+import entity.TUserResult;
+import entity.TUserValue;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-import jdbc.DBCacheImpl;
-import jdbc.DBInsert;
-import jdbc.DBQuery;
-import jdbc.DBUpdate;
-import jdbc.TransactionFrame;
+import java.sql.Statement;
+import org.apache.log4j.Logger;
 
 /**
- * Created by Y Sa on 12/15/16.
+ *
+ * @author Y Sa
  */
 public class UserDA {
 
-    private static final Lock createLock_ = new ReentrantLock();
-    private static final String configName = "grabman";
-    private static final Map<String, UserDA> sInstance = new HashMap<>();
+    private static final Logger logger = LogUtil.getLogger(UserDA.class);
+    private static UserDA _instance;
 
+    private static final String INSERT_QUERY = "INSERT INTO user(identityCard, fullName, userName, password, email, address, phone, schoolID, dateCreated, extProperties, avatarURL, type, status) "
+            + " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+    private static final String UPDATE_QUERY = "UPDATE user SET identityCard = ?, fullName = ?, userName = ?, password = ?, email = ?, address = ?, phone = ?, schoolID = ?, dateModified = ?, extProperties = ?, avatarURL = ?, type = ?, status = ? "
+                + "WHERE userID = ? ";
+
+    private static final String SELECT_QUERY = "SELECT * FROM user WHERE %s";
+    
+    private static final String COUNT_QUERY = "SELECT count(1) FROM user WHERE %s";
+    
+    static final String GET_USER_QUERY = "SELECT * "
+            + "FROM user WHERE userID = ?";
+
+    static final String GET_USERS_SELECT = "SELECT id ";
+
+    static final String GET_USERS_FROM = "FROM user WHERE 1=1 ";
+    static final String GET_USERS_COUNT = "SELECT COUNT(1) as totalRecord ";
+
+    static final String USERS_BY_USERNAME_FROM = "FROM user WHERE userName = ? ";
+    static final String DELETE_USER = "DELETE FROM user WHERE userID = ? ";
+    
     public static UserDA getInstance() {
-        if (sInstance.get(configName) == null) {
-            try {
-                createLock_.lock();
-                sInstance.put(configName, new UserDA());
-            } finally {
-                createLock_.unlock();
-            }
+        if (_instance == null) {
+            _instance = new UserDA();
         }
-        return sInstance.get(configName);
+        return _instance;
     }
 
-    public UserDA() {
-        
-    }
-
-    //<editor-fold defaultstate="collapsed" desc="User">
-    public UserEnt insert(UserEnt ent) {
-        TransactionFrame tf = new TransactionFrame(configName);
-        DBInsert insert = DBCacheImpl.getInstance().insert("insert_user");
+    public static TUserValue toValue(ResultSet rs) {
+        TUserValue ret = new TUserValue();
         try {
-            insert.init(tf);
-
-            if (!insert.isCached()) {
-                insert.setTable("user");
-
-                insert.addColumn("identityCard");
-                insert.addColumn("userName");
-                insert.addColumn("fullName");
-                insert.addColumn("email");
-                insert.addColumn("address");
-                insert.addColumn("phone");
-                insert.addColumn("schoolID");
-                insert.addColumn("dateCreated");
-                insert.addColumn("password");
-                insert.addColumn("extProperties");
-                insert.addColumn("avatarURL");
-                insert.addColumn("type");
-                insert.addPlaceHolder(12);
+            if (rs != null) {
+                ret.setUserID(rs.getLong("userID"));
+                ret.setAddress(rs.getString("address"));
+                ret.setAvatarURL(rs.getString("avatarURL"));
+                ret.setDateCreated(rs.getLong("dateCreated"));
+                ret.setDateModified(rs.getLong("dateModified"));
+                ret.setEmail(rs.getString("email"));
+                ret.setExtProperties(rs.getLong("extProperties"));
+                ret.setFullName(rs.getString("fullName"));
+                ret.setIdentityCard(rs.getString("identityCard"));
+                ret.setPassword(rs.getString("password"));
+                ret.setPhone(rs.getString("phone"));
+                ret.setSchoolID(rs.getLong("schoolID"));
+                ret.setStatus(rs.getShort("status"));
+                ret.setType(rs.getShort("type"));
+                ret.setUserID(rs.getLong("userID"));
+                ret.setUserName(rs.getString("userName"));                
             }
-
-            insert.getParameter().add(ent.identityCard);
-            insert.getParameter().add(ent.userName);
-            insert.getParameter().add(ent.fullName);
-            insert.getParameter().add(ent.email);
-            insert.getParameter().add(ent.address);
-            insert.getParameter().add(ent.phone);
-            insert.getParameter().add(ent.schoolId);
-            insert.getParameter().add(System.currentTimeMillis());
-            insert.getParameter().add(ent.password);
-            insert.getParameter().add(ent.extProperties);
-            insert.getParameter().add(ent.avatarUrl);
-            insert.getParameter().add(ent.type);
-            ent.userID = ConvertUtils.toInt(insert.executeInsert());
-            return ent;
-        } catch (Exception ex) {
-            GA.app.error("Exception", ex);
-        } finally {
-            tf.releasePooledConnection();
+        } catch (Exception e) {
+            logger.error(LogUtil.stackTrace(e));
         }
-        return null;
+        return ret;
     }
-
-    public boolean update(UserEnt ent) {
-        TransactionFrame tf = new TransactionFrame(configName);
-        DBUpdate update = DBCacheImpl.getInstance().update("update_user");
-        try {
-            update.init(tf);
-
-            if (!update.isCached()) {
-                update.setTable("user");
-
-                update.addColumn("identityCard");
-                update.addColumn("fullName");
-                update.addColumn("email");
-                update.addColumn("address");
-                update.addColumn("phone");
-                update.addColumn("schoolID");
-                update.addColumn("dateModified");
-                update.addColumn("extProperties");
-                update.addColumn("avatarURL");
-                update.addColumn("type");
-                update.addClause("userID", "=?");
-            }
-
-            update.getParameter().add(ent.identityCard);
-            update.getParameter().add(ent.fullName);
-            update.getParameter().add(ent.address);
-            update.getParameter().add(ent.phone);
-            update.getParameter().add(ent.schoolId);
-            update.getParameter().add(System.currentTimeMillis());
-            update.getParameter().add(ent.extProperties);
-            update.getParameter().add(ent.avatarUrl);
-            update.getParameter().add(ent.type);
-            update.getParameter().add(ent.userID);
-            return update.executeUpdate() > 0;
-
-        } catch (Exception ex) {
-            GA.app.error("Exception", ex);
+    
+    public static boolean insert(TUserValue item) {
+        boolean result = false;
+        ManagerIF cm = ClientManager.getInstance(DATABASE.NDH);
+        Connection cnn = cm.borrowClient();
+        try (PreparedStatement st = cnn.prepareStatement(INSERT_QUERY, Statement.RETURN_GENERATED_KEYS)) {
+            int index = 0; 
+            st.setString(++index,item.identityCard);
+            st.setString(++index,item.fullName);
+            st.setString(++index,item.userName);
+            st.setString(++index,item.password);
+            st.setString(++index,item.email);
+            st.setString(++index,item.address);
+            st.setString(++index,item.phone);
+            st.setLong(++index, item.schoolID);
+            st.setLong(++index, DateTimeUtils.getMilisecondsNow());
+            st.setLong(++index, item.extProperties);
+            st.setString(++index, item.avatarURL);
+            st.setShort(++index, item.type);
+            st.setShort(++index, item.status);
+            int row = st.executeUpdate();
+            result = row > 0;
+        } catch (SQLException ex) {
+            logger.error(LogUtil.stackTrace(ex));
         } finally {
-            tf.releasePooledConnection();
-        }
-        return false;
-    }
-
-    private UserEnt getByResultSet(ResultSet rs) throws SQLException {
-        UserEnt item = new UserEnt();
-        item.userID = rs.getLong("userID");
-        item.identityCard = rs.getString("identityCard");
-        item.userName = rs.getString("userName");
-        item.fullName = rs.getString("fullName");
-        item.email = rs.getString("email");
-        item.address = rs.getString("address");
-        item.phone = rs.getString("phone");
-        item.schoolId = rs.getInt("schoolID");
-        item.dateCreated = rs.getLong("dateCreated");
-        item.dateModified = rs.getLong("dateModified");
-        item.password = rs.getString("password");
-        item.extProperties = rs.getInt("extProperties");
-        item.avatarUrl = rs.getString("avatarUrl");
-        item.type = rs.getShort("type");
-        return item;
-    }
-
-    public List<UserEnt> getListUser(int index, int offset) {
-        List<UserEnt> result = new ArrayList();
-        TransactionFrame tf = new TransactionFrame(configName);
-        DBQuery query = DBCacheImpl.getInstance().query("get_list_user");
-        try {
-            query.init(tf);
-
-            if (!query.isCached()) {
-                query.addTable("user");
-                query.addColumn("userID");
-                query.addColumn("identityCard");
-                query.addColumn("userName");
-                query.addColumn("fullName");
-                query.addColumn("email");
-                query.addColumn("address");
-                query.addColumn("phone");
-                query.addColumn("schoolID");
-                query.addColumn("dateCreated");
-                query.addColumn("dateModified");
-                query.addColumn("password");
-                query.addColumn("extProperties");
-                query.addColumn("avatarUrl");
-                query.addColumn("type");
-                query.setQueryOrder("userID", "desc");
-                query.setLimit("?,?");
+            if (cnn != null) {
+                cm.returnClient(cnn);
             }
-            query.getParameter().add(index * offset);
-            query.getParameter().add(offset);
-
-            try (ResultSet rs = query.executeQuery()) {
-                while (rs.next()) {
-                    try {
-                        result.add(getByResultSet(rs));
-                    } catch (SQLException ex) {
-                    }
-                }
-            }
-        } catch (Exception ex) {
-            GA.jdbc.error("Exception", ex);
-        } finally {
-            tf.releasePooledConnection();
         }
         return result;
     }
     
-    public UserEnt getDetail(long userID) {
-        UserEnt result = new UserEnt();
-        TransactionFrame tf = new TransactionFrame(configName);
-        DBQuery query = DBCacheImpl.getInstance().query("get_detail_user");
-        try {
-            query.init(tf);
-
-            if (!query.isCached()) {
-                query.addTable("user");
-                query.addColumn("userID");
-                query.addColumn("identityCard");
-                query.addColumn("userName");
-                query.addColumn("fullName");
-                query.addColumn("email");
-                query.addColumn("address");
-                query.addColumn("phone");
-                query.addColumn("schoolID");
-                query.addColumn("dateCreated");
-                query.addColumn("dateModified");
-                query.addColumn("password");
-                query.addColumn("extProperties");
-                query.addColumn("avatarUrl");
-                query.addColumn("type");
-                query.addClause("userID = ?");
-                query.setQueryOrder("userID", "desc");
-            }
-            query.getParameter().add(userID);
-
-            try (ResultSet rs = query.executeQuery()) {
-                while (rs.next()) {
-                    try {
-                        result = getByResultSet(rs);
-                        return result;
-                    } catch (SQLException ex) {
-                    }
-                }
-            }
-        } catch (Exception ex) {
-            GA.jdbc.error("Exception", ex);
+    public static boolean update(TUserValue item) {
+        boolean result = false;
+        ManagerIF cm = ClientManager.getInstance(DATABASE.NDH);
+        Connection cnn = cm.borrowClient();
+        try (PreparedStatement st = cnn.prepareStatement(UPDATE_QUERY, Statement.RETURN_GENERATED_KEYS)) {
+            int index = 0; 
+            st.setString(++index,item.identityCard);
+            st.setString(++index,item.fullName);
+            st.setString(++index,item.userName);
+            st.setString(++index,item.password);
+            st.setString(++index,item.email);
+            st.setString(++index,item.address);
+            st.setString(++index,item.phone);
+            st.setLong(++index, item.schoolID);
+            st.setLong(++index, DateTimeUtils.getMilisecondsNow());
+            st.setLong(++index, item.extProperties);
+            st.setString(++index, item.avatarURL);
+            st.setShort(++index, item.type);
+            st.setShort(++index, item.status);
+            st.setLong(++index, item.userID);
+            int row = st.executeUpdate();
+            result = row > 0;
+        } catch (SQLException ex) {
+            logger.error(LogUtil.stackTrace(ex));
         } finally {
-            tf.releasePooledConnection();
+            if (cnn != null) {
+                cm.returnClient(cnn);
+            }
         }
         return result;
     }
     
-    public UserEnt checkLogin(String email, String pass) {
-        UserEnt result = new UserEnt();
-        TransactionFrame tf = new TransactionFrame(configName);
-        DBQuery query = DBCacheImpl.getInstance().query("get_login_user");
-        try {
-            query.init(tf);
+    public static TUserResult getUser(long userId) {
+        TUserResult result = new TUserResult();
+        ManagerIF cm = ClientManager.getInstance(DATABASE.NDH);
+        Connection cnn = cm.borrowClient();
+        try (PreparedStatement ps = cnn.prepareStatement(GET_USER_QUERY)) {
+            ps.setLong(1, userId);
+            TUserValue user = null;
 
-            if (!query.isCached()) {
-                query.addTable("user");
-                query.addColumn("userID");
-                query.addColumn("identityCard");
-                query.addColumn("userName");
-                query.addColumn("fullName");
-                query.addColumn("email");
-                query.addColumn("address");
-                query.addColumn("phone");
-                query.addColumn("schoolID");
-                query.addColumn("dateCreated");
-                query.addColumn("dateModified");
-                query.addColumn("password");
-                query.addColumn("extProperties");
-                query.addColumn("avatarUrl");
-                query.addColumn("type");
-                query.addClause("email = ?");
-                query.addClause("password = ?");
-                query.setQueryOrder("userID", "desc");
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                user = toValue(rs);
             }
-            query.getParameter().add(email);
-            query.getParameter().add(pass);
-            
 
-            try (ResultSet rs = query.executeQuery()) {
+            result.setValue(user);
+            result.setErrorCode((short) 0);
+
+            rs.close();
+        } catch (SQLException ex) {
+            logger.error(LogUtil.stackTrace(ex));
+        } finally {
+            if (cnn != null) {
+                cm.returnClient(cnn);
+            }
+        }
+        return result;
+    }
+
+    public static boolean deleteUser(long id) {
+        boolean result = false;
+        ManagerIF cm = ClientManager.getInstance(DATABASE.NDH);
+        Connection cnn = cm.borrowClient();
+        try (PreparedStatement ps = cnn.prepareStatement(DELETE_USER)) {
+
+            ps.setLong(1, id);
+            result = ps.executeUpdate() > 0;
+
+        } catch (SQLException ex) {
+            logger.error(LogUtil.stackTrace(ex));
+        } finally {
+            if (cnn != null) {
+                cm.returnClient(cnn);
+            }
+        }
+        return result;
+    }
+
+    public static long getUserByUsername(String username) {
+        long ret = 0;
+        ManagerIF cm = ClientManager.getInstance(DATABASE.NDH);
+        Connection cnn = cm.borrowClient();
+        try (PreparedStatement ps = cnn.prepareStatement(GET_USERS_SELECT + USERS_BY_USERNAME_FROM)) {
+            ps.setString(1, username);
+
+            try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    try {
-                        result = getByResultSet(rs);
-                        return result;
-                    } catch (SQLException ex) {
-                    }
+                    ret = rs.getLong("id");
                 }
             }
-        } catch (Exception ex) {
-            GA.jdbc.error("Exception", ex);
+        } catch (SQLException ex) {
+            logger.error(LogUtil.stackTrace(ex));
         } finally {
-            tf.releasePooledConnection();
+            if (cnn != null) {
+                cm.returnClient(cnn);
+            }
         }
-        return result;
+        return ret;
     }
-    
-    
-    
-//</editor-fold>
 }
