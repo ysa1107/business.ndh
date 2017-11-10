@@ -5,13 +5,12 @@
  */
 package entity;
 
-import grabman.model.SchoolDA;
 
 /**
  *
- * @author ysa
+ * @author Y Sa
  */
-public class UserEnt {
+public class TUserValue {
 
     public long getUserID() {
         return userID;
@@ -35,6 +34,14 @@ public class UserEnt {
 
     public void setUserName(String userName) {
         this.userName = userName;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 
     public String getFullName() {
@@ -69,12 +76,12 @@ public class UserEnt {
         this.phone = phone;
     }
 
-    public long getSchoolId() {
-        return schoolId;
+    public long getSchoolID() {
+        return schoolID;
     }
 
-    public void setSchoolId(long schoolId) {
-        this.schoolId = schoolId;
+    public void setSchoolID(long schoolID) {
+        this.schoolID = schoolID;
     }
 
     public long getDateCreated() {
@@ -93,35 +100,20 @@ public class UserEnt {
         this.dateModified = dateModified;
     }
 
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
-    public int getExtProperties() {
+    public long getExtProperties() {
         return extProperties;
     }
 
-    public void setExtProperties(int extProperties) {
+    public void setExtProperties(long extProperties) {
         this.extProperties = extProperties;
     }
 
-    public String getAvatarUrl() {
-        return avatarUrl;
+    public String getAvatarURL() {
+        return avatarURL;
     }
 
-    public void setAvatarUrl(String avatarUrl) {
-        this.avatarUrl = avatarUrl;
-    }
-    public String getSchoolName() {
-        return schoolName;
-    }
-
-    public void setSchoolName(String schoolName) {
-        this.schoolName = schoolName;
+    public void setAvatarURL(String avatarURL) {
+        this.avatarURL = avatarURL;
     }
 
     public short getType() {
@@ -131,51 +123,54 @@ public class UserEnt {
     public void setType(short type) {
         this.type = type;
     }
+
+    public short getStatus() {
+        return status;
+    }
+
+    public void setStatus(short status) {
+        this.status = status;
+    }
+
     public long userID;
     public String identityCard;
     public String userName;
-    public String fullName;
+    public String password;
+    public String fullName;    
     public String email;
     public String address;
     public String phone;
-    public long schoolId;
+    public long schoolID;
     public long dateCreated;
     public long dateModified;
-    public String password;
-    public int extProperties;
-    public String avatarUrl;
-    public String schoolName = "";
+    
+    public long extProperties;
+    public String avatarURL;
     public short type;
-    public String typeName;
+    public short status;
     
     
-    public UserEnt(UserEnt item){
+    public TUserValue(TUserValue item){
         this.userID = item.userID;
         this.identityCard = item.identityCard;
         this.userName = item.userName;
+                this.password = item.password;
+
         this.fullName = item.fullName;
         this.email = item.email;
         this.address = item.address;
         this.phone = item.phone;
-        this.schoolId = item.schoolId;
+        this.schoolID = item.schoolID;
         this.dateCreated = item.dateCreated;
         this.dateModified = item.dateModified;
-        this.password = item.password;
         this.extProperties = item.extProperties;
-        this.avatarUrl = item.avatarUrl;
-        this.schoolName = SchoolDA.getInstance().getDetail(item.schoolId).name;
+        this.avatarURL = item.avatarURL;
+        //this.schoolName = SchoolDA.getInstance().getDetail(item.schoolId).name;
         this.type = item.type;
-        switch(item.type){
-            case 0: // receiver
-                this.typeName = "Người nhận sự trợ giúp";
-                break;
-            case 1: //sender
-                this.typeName = "Người gửi sự trợ giúp";
-                break;
-        }      
+        this.status = item.status;    
     }    
     
-    public UserEnt(){
+    public TUserValue(){
         
     }
 }
