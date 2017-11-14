@@ -15,6 +15,16 @@ public class TListUserResult {
     public long totalRecords;
     public List<TUserValue> listData;
 
+    public short getErrorCode() {
+        return errorCode;
+    }
+
+    public void setErrorCode(short errorCode) {
+        this.errorCode = errorCode;
+    }
+
+    public short errorCode;
+
     public long getTotalRecords() {
         return totalRecords;
     }

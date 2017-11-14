@@ -5,6 +5,8 @@ import com.kyt.framework.dbconn.ClientManager;
 import com.kyt.framework.dbconn.ManagerIF;
 import com.kyt.framework.util.DateTimeUtils;
 import constant.DATABASE;
+import entity.TListUserResult;
+import entity.TUserFilter;
 import entity.TUserResult;
 import entity.TUserValue;
 import java.sql.Connection;
@@ -12,6 +14,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.*;
+
 import org.apache.log4j.Logger;
 
 /**
@@ -23,10 +27,10 @@ public class UserDA {
     private static final Logger logger = LogUtil.getLogger(UserDA.class);
     private static UserDA _instance;
 
-    private static final String INSERT_QUERY = "INSERT INTO user(identityCard, fullName, userName, password, email, address, phone, schoolID, dateCreated, extProperties, avatarURL, type, status) "
-            + " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    private static final String INSERT_QUERY = "INSERT INTO user(identityCard, fullName, userName, password, email, address, phone, schoolID, dateCreated, extProperties, avatarURL, type, status, birthday, genre) "
+            + " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-    private static final String UPDATE_QUERY = "UPDATE user SET identityCard = ?, fullName = ?, userName = ?, password = ?, email = ?, address = ?, phone = ?, schoolID = ?, dateModified = ?, extProperties = ?, avatarURL = ?, type = ?, status = ? "
+    private static final String UPDATE_QUERY = "UPDATE user SET identityCard = ?, fullName = ?, userName = ?, password = ?, email = ?, address = ?, phone = ?, schoolID = ?, dateModified = ?, extProperties = ?, avatarURL = ?, type = ?, status = ?, birthday = ?, gender = ? "
                 + "WHERE userID = ? ";
 
     private static final String SELECT_QUERY = "SELECT * FROM user WHERE %s";
@@ -36,7 +40,7 @@ public class UserDA {
     static final String GET_USER_QUERY = "SELECT * "
             + "FROM user WHERE userID = ?";
 
-    static final String GET_USERS_SELECT = "SELECT id ";
+    static final String GET_USERS_SELECT = "SELECT * ";
 
     static final String GET_USERS_FROM = "FROM user WHERE 1=1 ";
     static final String GET_USERS_COUNT = "SELECT COUNT(1) as totalRecord ";
@@ -70,7 +74,9 @@ public class UserDA {
                 ret.setStatus(rs.getShort("status"));
                 ret.setType(rs.getShort("type"));
                 ret.setUserID(rs.getLong("userID"));
-                ret.setUserName(rs.getString("userName"));                
+                ret.setUserName(rs.getString("userName"));
+                ret.setBirthday(rs.getLong("birthday"));
+                ret.setGender(rs.getShort("gender"));
             }
         } catch (Exception e) {
             logger.error(LogUtil.stackTrace(e));
@@ -97,6 +103,8 @@ public class UserDA {
             st.setString(++index, item.avatarURL);
             st.setShort(++index, item.type);
             st.setShort(++index, item.status);
+            st.setLong(++index, item.birthday);
+            st.setShort(++index, item.gender);
             int row = st.executeUpdate();
             result = row > 0;
         } catch (SQLException ex) {
@@ -207,5 +215,104 @@ public class UserDA {
             }
         }
         return ret;
+    }
+
+    public static TListUserResult getUsers(TUserFilter filter) {
+        TListUserResult result = new TListUserResult();
+        ManagerIF cm = ClientManager.getInstance(DATABASE.NDH);
+        Connection cnn = cm.borrowClient();
+        try {
+            List<TUserValue> listData = new ArrayList<>();
+            Map<Integer, Object> params = new HashMap<>();
+            StringBuilder fromQuery = new StringBuilder(GET_USERS_FROM);
+
+            int i = 1;
+            if (filter.getLstUserIds() != null && filter.getLstUserIds().size() > 0) {
+                fromQuery.append("AND id IN ( ");
+                for (int t = 0; t < filter.getLstUserIds().size(); t++) {
+                    fromQuery.append("?, ");
+                    params.put(i++, filter.getLstUserIds().get(t));
+                }
+                fromQuery.append("0) ");
+            }
+
+            if (filter.getUsername() != null) {
+                fromQuery.append("AND username like ? ");
+                params.put(i++, "%" + filter.getUsername() + "%");
+            }
+
+//            if (filter.getEmail() != null) {
+//                fromQuery.append("AND email like ? ");
+//                params.put(i++, "%" + filter.getEmail() + "%");
+//            }
+//            if (filter.getStatus() > 0) {
+//                fromQuery.append("AND status = ? ");
+//                params.put(i++, filter.getStatus());
+//            }
+//            if (filter.getGender() > 0) {
+//                fromQuery.append("AND gender = ? ");
+//                params.put(i++, filter.getGender());
+//            }
+//            if (filter.getBrandId() > 0) {
+//                fromQuery.append("AND id IN (SELECT user_id FROM brand_user WHERE brand_id = ?)");
+//                params.put(i++, filter.getBrandId());
+//            }
+
+
+            //count query
+            PreparedStatement ps = cnn.prepareStatement(GET_USERS_COUNT + fromQuery);
+            setParameters(ps, params);
+            ResultSet rs = ps.executeQuery();
+            rs.next();
+            int totalRecord = rs.getInt("totalRecord");
+
+            //select query
+//            if (filter.getOrderBy() != null && !"".equals(filter.getOrderBy())) {
+//                fromQuery.append("ORDER BY ").append(filter.getOrderBy());
+//
+//                if (filter.getOrderType() != null && !"".equals(filter.getOrderBy())) {
+//                    fromQuery.append(" ").append(filter.getOrderType()).append(" ");
+//                }
+//            }
+
+            String countStr = "";
+            if (filter.getPageIndex() > 0) {
+                countStr = "LIMIT ?, ? ";
+                params.put(i++, (filter.getPageIndex() - 1) * filter.getPageSize());
+                params.put(i++, filter.getPageSize());
+            }
+
+            ps = cnn.prepareStatement(GET_USERS_SELECT + fromQuery + countStr);
+            setParameters(ps, params);
+            rs = ps.executeQuery();
+            TUserValue user = null;
+
+            while (rs.next()) {
+                user = toValue(rs);
+                listData.add(user);
+            }
+
+            //set data
+            result.setErrorCode((short) 0);
+            result.setListData(listData);
+            result.setTotalRecords(totalRecord);
+
+            ps.close();
+        } catch (SQLException ex) {
+            logger.error(LogUtil.stackTrace(ex));
+        } finally {
+            if (cnn != null) {
+                cm.returnClient(cnn);
+            }
+        }
+        return result;
+    }
+
+    private static void setParameters(PreparedStatement st, Map<Integer, Object> params) throws SQLException {
+        if (params != null) {
+            for (Integer key : params.keySet()) {
+                st.setObject(key, params.get(key));
+            }
+        }
     }
 }

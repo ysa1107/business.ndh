@@ -11,6 +11,23 @@ package entity;
  * @author Y Sa
  */
 public class TUserValue {
+    public long userID;
+    public String identityCard;
+    public String userName;
+    public String password;
+    public String fullName;
+    public String email;
+    public String address;
+    public String phone;
+    public long schoolID;
+    public long dateCreated;
+    public long dateModified;
+
+    public long extProperties;
+    public String avatarURL;
+    public short type;
+    public short status;
+    public long birthday;
 
     public long getUserID() {
         return userID;
@@ -132,22 +149,25 @@ public class TUserValue {
         this.status = status;
     }
 
-    public long userID;
-    public String identityCard;
-    public String userName;
-    public String password;
-    public String fullName;    
-    public String email;
-    public String address;
-    public String phone;
-    public long schoolID;
-    public long dateCreated;
-    public long dateModified;
-    
-    public long extProperties;
-    public String avatarURL;
-    public short type;
-    public short status;
+
+
+    public long getBirthday() {
+        return birthday;
+    }
+
+    public void setBirthday(long birthday) {
+        this.birthday = birthday;
+    }
+
+    public short getGender() {
+        return gender;
+    }
+
+    public void setGender(short gender) {
+        this.gender = gender;
+    }
+
+    public short gender;
     
     
     public TUserValue(TUserValue item){
@@ -167,7 +187,9 @@ public class TUserValue {
         this.avatarURL = item.avatarURL;
         //this.schoolName = SchoolDA.getInstance().getDetail(item.schoolId).name;
         this.type = item.type;
-        this.status = item.status;    
+        this.status = item.status;
+        this.birthday = item.birthday;
+        this.gender = item.gender;
     }    
     
     public TUserValue(){

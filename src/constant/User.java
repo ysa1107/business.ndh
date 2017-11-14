@@ -10,9 +10,15 @@ package constant;
  * @author ysa
  */
 public class User {
-    public class TYPE {
-        public short REQUESTER = 0;
-        public short RECEIVER = 1;
-        public short ADMIN = 2;
+    public static class TYPE {
+        public static short REQUESTER = 0;
+        public static short RECEIVER = 1;
+        public static short ADMIN = 2;
+    }
+
+    public static class GENDER {
+        public static short UNKNOWN = 0;
+        public static short MALE = 1;
+        public static short FEMALE = 2;
     }
 }
